@@ -11,12 +11,17 @@ Map request = [:]
 
 def jsonSlurper = new JsonSlurper()
 
-Map candidatesMap = jsonSlurper.parse(new File("./votes.json"))
+Map candidatesMap = [:]
 
 
-///def file = new File("./votes.json")
-//Map resutlsFile = jsonSlurper.parse(new File("./votes.json"))
+def file = new File("./votes.json")
 
+if (file.size() > 0) {
+    candidatesMap = jsonSlurper.parse(new File("./votes.json"))
+}
+else{
+    candidatesMap = [:]
+}
 
 
 HttpServer.create(new InetSocketAddress(PORT), /*max backlog*/ 0).with {
@@ -25,10 +30,10 @@ HttpServer.create(new InetSocketAddress(PORT), /*max backlog*/ 0).with {
         http.responseHeaders.add("Content-type", "application/json")
         http.sendResponseHeaders(200, 0)
         http.responseBody.withWriter { out ->
-            out << "Your vote is accepted"
             request = jsonSlurper.parseText(http.requestBody.getText())
             candidate = request.candidate
-        }
+            if (candidate?.trim()) {
+                out << "Your vote is accepted"
         boolean isExistsInResultsFile = candidatesMap.containsKey(candidate)
         if(isExistsInResultsFile)     {
             int voteCount = candidatesMap.getAt(candidate)
@@ -47,7 +52,11 @@ HttpServer.create(new InetSocketAddress(PORT), /*max backlog*/ 0).with {
         } catch (Exception e) {
             println("Failed to write to results file! ${e}")
         }
-
+            }
+            else{
+                out << "Please send a valid candidate name"
+            }
+        }
         println ("${http.requestMethod.toString()} Request received")
     }
 
